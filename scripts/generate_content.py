@@ -39,6 +39,50 @@ HEADER = [
 
 SERIES = ["チンアナゴ人生相談", "POPPY GUMMY BEARS"]
 
+# ── Diverse topic pools ────────────────────────────────────────────────────────
+
+CHINANA_TOPICS = [
+    "仕事のメールを返信できずに溜めてしまう",
+    "SNSのいいね数が気になりすぎる",
+    "上司に理不尽に怒られた",
+    "友達の自慢話を聞かされ続ける",
+    "朝起きられなくて遅刻しそう",
+    "ダイエットが三日坊主で終わる",
+    "推しに課金しすぎて貯金ゼロ",
+    "会議で発言できないまま終わる",
+    "彼氏・彼女に既読スルーされた",
+    "転職したいけど踏み出せない",
+    "友人の結婚ラッシュで焦っている",
+    "承認欲求が強くて疲れた",
+    "インスタの加工が止まらない",
+    "人と比べてしまう癖が治らない",
+    "飲み会に行きたくないが断れない",
+    "副業を始めたいが何もできない",
+    "ゲームをやめられない深夜",
+    "部屋が片付けられない",
+]
+
+POPPY_SCENES = [
+    "コンビニのレジ前でポイントカードを探している",
+    "巨大なコーヒーカップの縁でくつろいでいる",
+    "冷蔵庫の野菜室に迷い込んでいる",
+    "本棚の隙間に基地を作っている",
+    "ノートパソコンのキーボードの上でダンスしている",
+    "炊飯器の蒸気に驚いて吹っ飛んでいる",
+    "文房具入れの中でオフィスを開設している",
+    "観葉植物をジャングルだと思って探検している",
+    "エアコンの風に乗って飛んでいる",
+    "スマホの画面を巨大スクリーンとして映画鑑賞している",
+    "シリアルの箱の中でプールをしている",
+    "電子レンジの中を覗き込んでいる",
+    "ハンドバッグの中に勝手に引っ越している",
+    "お風呂のあわを山だと思って登山している",
+    "本のページをトランポリン代わりにしている",
+    "冷凍ピザの上でソリ遊びをしている",
+    "バッグの中でトレジャーハントをしている",
+    "電車の吊り革にぶら下がっている",
+]
+
 CHINANA_SYSTEM = """\
 あなたはプロのSNSクリエイターです。
 「チンアナゴ人生相談」シリーズ用のコンテンツを生成してください。
@@ -47,7 +91,7 @@ CHINANA_SYSTEM = """\
 - チンアナゴ（Garden Eel）が現代人の悩みに正論でキツめに答える
 - 表情は基本的に無表情・真顔だが、ズバッと核心を突く
 
-出力形式（JSONで返してください）:
+出力形式（JSONのみ返してください。説明文は不要）:
 {
   "topic": "相談テーマ（簡潔に）",
   "en_script": "英語セリフ（10秒以内、2〜3文）",
@@ -63,6 +107,7 @@ CHINANA_SYSTEM = """\
 - ja_subtitle は en_script に対応する字幕（直訳より自然な日本語）
 - shooting_note は実写撮影の具体的な指示（チンアナゴのぬいぐるみ or フィギュアを使用）
 - hashtags は英語と日本語を混在させてよい
+- JSONのみ出力し、前後に余計な文章を入れない
 """
 
 POPPY_SYSTEM = """\
@@ -76,7 +121,7 @@ POPPY_SYSTEM = """\
 - 超リアル3Dレンダリング、ミニチュアスケール
 - 人間サイズの日常空間に紛れ込む1シーン完結ストーリー
 
-出力形式（JSONで返してください）:
+出力形式（JSONのみ返してください。説明文は不要）:
 {
   "scene": "シーン概要（簡潔に）",
   "en_script": "英語セリフ（10秒以内、キャラ名: セリフ の形式で）",
@@ -91,8 +136,8 @@ POPPY_SYSTEM = """\
 - image_prompt は Freepik Flux に最適化、写実的3Dレンダリング指示を含む
   例: "ultra-realistic 3D render, miniature scale, photorealistic gummy bear characters..."
 - セリフはキャラの個性を反映（Berry: 明るい、Citron: 論理的、Melron: のんびり）
-- 毎回異なる日常シーン（キッチン、カフェ、公園、オフィスなど）を設定
 - hashtags は英語と日本語を混在させてよい
+- JSONのみ出力し、前後に余計な文章を入れない
 """
 
 
@@ -125,7 +170,7 @@ def get_next_date(sheet: gspread.Worksheet) -> datetime.date:
     all_values = sheet.get_all_values()
 
     # Skip header row; find last date entry
-    for row in reversed(all_values[1:]):  # skip header
+    for row in reversed(all_values[1:]):
         if row and row[0]:
             try:
                 last_date = datetime.date.fromisoformat(row[0])
@@ -139,53 +184,54 @@ def get_next_date(sheet: gspread.Worksheet) -> datetime.date:
     return today + datetime.timedelta(days=days_until_monday)
 
 
-def generate_chinana_content(client: anthropic.Anthropic, topic_hint: str = "") -> dict:
+def parse_json_response(text: str) -> dict:
+    """Extract and parse JSON from Claude's response, handling markdown code blocks."""
+    text = text.strip()
+    if "```" in text:
+        parts = text.split("```")
+        for part in parts:
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:].strip()
+            if part.startswith("{"):
+                text = part
+                break
+    # Find the outermost JSON object
+    start = text.find("{")
+    end = text.rfind("}") + 1
+    if start != -1 and end > start:
+        text = text[start:end]
+    return json.loads(text)
+
+
+def generate_chinana_content(client: anthropic.Anthropic, topic: str) -> dict:
     """Generate one チンアナゴ人生相談 post via Claude."""
     user_prompt = (
-        f"次のテーマでチンアナゴ人生相談のコンテンツを1件生成してください: {topic_hint}"
-        if topic_hint
-        else "現代人のあるある悩みを1つ選んでチンアナゴ人生相談のコンテンツを1件生成してください。"
-        "仕事・SNS疲れ・人間関係など多様なテーマを扱ってください。"
+        f"次のテーマでコンテンツを1件生成してください:\n「{topic}」\n\n"
+        "必ずこのテーマに沿った内容にし、JSONのみ返してください。"
     )
-
     message = client.messages.create(
         model="claude-opus-4-6",
         max_tokens=1024,
         system=CHINANA_SYSTEM,
         messages=[{"role": "user", "content": user_prompt}],
     )
-
-    text = message.content[0].text.strip()
-    # Extract JSON (handle markdown code blocks)
-    if "```" in text:
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text)
+    return parse_json_response(message.content[0].text)
 
 
-def generate_poppy_content(client: anthropic.Anthropic, scene_hint: str = "") -> dict:
+def generate_poppy_content(client: anthropic.Anthropic, scene: str) -> dict:
     """Generate one POPPY GUMMY BEARS post via Claude."""
     user_prompt = (
-        f"次のシーンでPOPPY GUMMY BEARSのコンテンツを1件生成してください: {scene_hint}"
-        if scene_hint
-        else "日常の面白いシーンを1つ選んでPOPPY GUMMY BEARSのコンテンツを1件生成してください。"
-        "毎回異なるロケーション（キッチン、カフェ、電車内、公園など）を使ってください。"
+        f"次のシーンでコンテンツを1件生成してください:\n「{scene}」\n\n"
+        "必ずこのシーンを舞台にした内容にし、JSONのみ返してください。"
     )
-
     message = client.messages.create(
         model="claude-opus-4-6",
         max_tokens=1024,
         system=POPPY_SYSTEM,
         messages=[{"role": "user", "content": user_prompt}],
     )
-
-    text = message.content[0].text.strip()
-    if "```" in text:
-        text = text.split("```")[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text)
+    return parse_json_response(message.content[0].text)
 
 
 def build_row(date: datetime.date, series: str, content: dict) -> list:
@@ -220,6 +266,24 @@ def build_row(date: datetime.date, series: str, content: dict) -> list:
         ]
 
 
+def get_used_topics(sheet: gspread.Worksheet) -> set:
+    """Collect topics/scenes already in the sheet to avoid repeats."""
+    all_values = sheet.get_all_values()
+    used = set()
+    for row in all_values[1:]:  # skip header
+        if len(row) > 2 and row[2]:
+            used.add(row[2])
+    return used
+
+
+def pick_topic(pool: list, used: set, index: int) -> str:
+    """Pick a topic not already used; fall back to pool[index % len] if all used."""
+    for topic in pool[index % len(pool):] + pool[:index % len(pool)]:
+        if topic not in used:
+            return topic
+    return pool[index % len(pool)]
+
+
 def main():
     print("🚀 Starting SNS content generation...")
 
@@ -228,10 +292,13 @@ def main():
     sheet = get_or_create_sheet(sheets_client)
 
     start_date = get_next_date(sheet)
+    used_topics = get_used_topics(sheet)
     print(f"📅 Generating content starting from: {start_date}")
 
     rows_to_append = []
     current_date = start_date
+    chinana_idx = 0
+    poppy_idx = 0
 
     # Generate 14 posts (2 weeks), alternating series
     for i in range(14):
@@ -240,16 +307,22 @@ def main():
 
         try:
             if series == "チンアナゴ人生相談":
-                content = generate_chinana_content(anthropic_client)
+                topic = pick_topic(CHINANA_TOPICS, used_topics, chinana_idx)
+                chinana_idx += 1
+                used_topics.add(topic)
+                content = generate_chinana_content(anthropic_client, topic)
             else:
-                content = generate_poppy_content(anthropic_client)
+                scene = pick_topic(POPPY_SCENES, used_topics, poppy_idx)
+                poppy_idx += 1
+                used_topics.add(scene)
+                content = generate_poppy_content(anthropic_client, scene)
 
             row = build_row(current_date, series, content)
             rows_to_append.append(row)
+            print(f"    ✓ {content.get('topic') or content.get('scene', '')[:40]}")
 
         except Exception as e:
             print(f"    ⚠️  Error generating content: {e}")
-            # Append a placeholder row so dates stay consistent
             rows_to_append.append([
                 current_date.isoformat(), series, "ERROR", str(e),
                 "", "", "", "", "", "", "Error",
