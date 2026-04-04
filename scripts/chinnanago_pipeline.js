@@ -146,7 +146,7 @@ async function generateVideo(serif) {
     `・セリフ：\n　${serif}\n` +
     `・幼女のようなかわいい声`;
 
-  const endpoint = 'https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std';
+  const endpoint = 'https://api.freepik.com/v1/ai/image-to-video/kling-v2';
   const requestBody = {
     duration: '10',
     image: CHINNANAGO_IMAGE_URL,
@@ -192,7 +192,7 @@ async function generateVideo(serif) {
   for (let attempt = 1; attempt <= 90; attempt++) {
     await sleep(10000);
     const pollRes = await axios.get(
-      `https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std/${taskId}`,
+      `https://api.freepik.com/v1/ai/image-to-video/kling-v2/${taskId}`,
       { headers: { 'x-freepik-api-key': FREEPIK_API_KEY } }
     );
 
