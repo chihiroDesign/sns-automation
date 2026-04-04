@@ -148,14 +148,13 @@ async function generateVideo(serif) {
 
   console.log('[Freepik] Submitting video task...');
   const submitRes = await axios.post(
-    'https://api.freepik.com/v1/ai/image-to-video/kling-v2-5-pro',
+    'https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std',
     {
-      image_url: CHINNANAGO_IMAGE_URL,
-      prompt,
       duration: '10',
-      aspect_ratio: '9:16',
-      cfg_scale: 0.5,
+      image: CHINNANAGO_IMAGE_URL,
+      prompt,
       negative_prompt: 'blur, distort, low quality',
+      cfg_scale: 0.5,
     },
     {
       headers: {
@@ -175,7 +174,7 @@ async function generateVideo(serif) {
   for (let attempt = 1; attempt <= 90; attempt++) {
     await sleep(10000);
     const pollRes = await axios.get(
-      `https://api.freepik.com/v1/ai/image-to-video/kling-v2-5-pro/${taskId}`,
+      `https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std/${taskId}`,
       { headers: { 'x-freepik-api-key': FREEPIK_API_KEY } }
     );
 
