@@ -148,7 +148,7 @@ async function generateVideo(serif) {
 
   console.log('[Freepik] Submitting video task...');
   const submitRes = await axios.post(
-    'https://api.freepik.com/v1/ai/video/kling-v3-omni-std',
+    'https://api.freepik.com/v1/ai/image-to-video/kling-v2-5-pro',
     {
       image_url: CHINNANAGO_IMAGE_URL,
       prompt,
@@ -175,7 +175,7 @@ async function generateVideo(serif) {
   for (let attempt = 1; attempt <= 90; attempt++) {
     await sleep(10000);
     const pollRes = await axios.get(
-      `https://api.freepik.com/v1/ai/video/kling-v3-omni-std/${taskId}`,
+      `https://api.freepik.com/v1/ai/image-to-video/kling-v2-5-pro/${taskId}`,
       { headers: { 'x-freepik-api-key': FREEPIK_API_KEY } }
     );
 
