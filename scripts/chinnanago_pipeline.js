@@ -146,23 +146,41 @@ async function generateVideo(serif) {
     `・セリフ：\n　${serif}\n` +
     `・幼女のようなかわいい声`;
 
+  const endpoint = 'https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std';
+  const requestBody = {
+    duration: '10',
+    image: CHINNANAGO_IMAGE_URL,
+    prompt,
+    negative_prompt: 'blur, distort, low quality',
+    cfg_scale: 0.5,
+  };
+  const requestHeaders = {
+    'Content-Type': 'application/json',
+    'x-freepik-api-key': FREEPIK_API_KEY,
+  };
+
   console.log('[Freepik] Submitting video task...');
-  const submitRes = await axios.post(
-    'https://api.freepik.com/v1/ai/image-to-video/kling-v2-1-std',
-    {
-      duration: '10',
-      image: CHINNANAGO_IMAGE_URL,
-      prompt,
-      negative_prompt: 'blur, distort, low quality',
-      cfg_scale: 0.5,
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-freepik-api-key': FREEPIK_API_KEY,
-      },
-    }
-  );
+  console.log('[Freepik] Endpoint:', endpoint);
+  console.log('[Freepik] Headers:', JSON.stringify({
+    ...requestHeaders,
+    'x-freepik-api-key': FREEPIK_API_KEY ? `***${FREEPIK_API_KEY.slice(-4)}` : '(not set)',
+  }));
+  console.log('[Freepik] Request body:', JSON.stringify(requestBody, null, 2));
+
+  let submitRes;
+  try {
+    submitRes = await axios.post(endpoint, requestBody, { headers: requestHeaders });
+  } catch (err) {
+    const status = err.response?.status;
+    const data = err.response?.data;
+    console.error(`[Freepik] HTTP ${status} error`);
+    console.error('[Freepik] Response headers:', JSON.stringify(err.response?.headers));
+    console.error('[Freepik] Response body:', JSON.stringify(data));
+    throw new Error(`Freepik API ${status}: ${JSON.stringify(data)}`);
+  }
+
+  console.log('[Freepik] Submit response status:', submitRes.status);
+  console.log('[Freepik] Submit response body:', JSON.stringify(submitRes.data));
 
   const taskId = submitRes.data?.data?.task_id ?? submitRes.data?.task_id;
   if (!taskId) {
