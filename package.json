@@ -1,0 +1,14 @@
+{
+  "name": "sns-automation",
+  "version": "1.0.0",
+  "description": "SNS automation pipeline",
+  "main": "scripts/chinnanago_pipeline.js",
+  "scripts": {
+    "chinnanago": "node scripts/chinnanago_pipeline.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.3",
+    "axios": "^1.7.9",
+    "googleapis": "^144.0.0"
+  }
+}
