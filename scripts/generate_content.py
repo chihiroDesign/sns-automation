@@ -25,8 +25,14 @@ SCOPES = [
 HEADER = [
     "Date",
     "Series",
-    "Topic",
+    "Topic or Scene",
+    "EN Script",
     "JA Subtitle",
+    "Image Prompt",
+    "Shooting Note",
+    "EN Caption",
+    "JA Caption",
+    "Hashtags",
     "Status",
 ]
 
@@ -148,11 +154,17 @@ def main():
     for i, item in enumerate(items):
         date = start_date + datetime.timedelta(days=i)
         rows.append([
-            date.isoformat(),
-            "チンアナゴ人生相談",
-            item.get("topic", ""),
-            item.get("ja_subtitle", ""),
-            "Draft",
+            date.isoformat(),          # A: Date
+            "チンアナゴ人生相談",       # B: Series
+            item.get("topic", ""),     # C: Topic or Scene
+            "",                        # D: EN Script
+            item.get("ja_subtitle", ""),  # E: JA Subtitle
+            "",                        # F: Image Prompt
+            "",                        # G: Shooting Note
+            "",                        # H: EN Caption
+            "",                        # I: JA Caption
+            "",                        # J: Hashtags
+            "Draft",                   # K: Status
         ])
         print(f"  [{i+1}/{NUM_POSTS}] {date} | {item.get('topic', '')} → {item.get('ja_subtitle', '')}")
 
