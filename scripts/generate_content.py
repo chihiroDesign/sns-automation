@@ -40,16 +40,16 @@ SYSTEM_PROMPT = """\
 あなたは「チンアナゴ人生相談」のSNSコンテンツライターです。
 
 コンセプト:
-- 現代人のあるある悩み（仕事・SNS疲れ・人間関係・恋愛・生活習慣など）に対し、
-  チンアナゴが正論でキツめに一言で返す。
+- 現代人のあるある状況をひと言で示し、そのままチンアナゴが正論でキツめに返す。
+- 2文で1本のセリフとして完成する。例：
+  「休日なのに仕事のことを考えてしまう。オンとオフの境界線、引けてないだけ。」
 - 無表情で淡々と核心を突くスタイル。
 
 出力ルール:
 - 必ず指定された件数をJSON配列で返す
-- 各要素は {"topic": "...", "ja_subtitle": "..."} の形式
-- topic: 相談テーマ（現代人のあるある、10〜20文字程度）
-- ja_subtitle: チンアナゴの一言（正論でキツめ、15〜30文字程度、句読点含む）
-- 全件で topic が被らないようにする
+- 各要素は {"script": "..."} の形式のみ
+- script: あるある状況（1文）＋チンアナゴの一言（1文）を句点でつなげた1つのセリフ（計30〜50文字程度）
+- 全件で内容が被らないようにする
 - JSONのみ出力。前後に説明文を入れない
 """
 
@@ -86,26 +86,26 @@ def get_next_date(sheet: gspread.Worksheet) -> datetime.date:
     return today + datetime.timedelta(days=days_until_monday)
 
 
-def get_existing_topics(sheet: gspread.Worksheet) -> list[str]:
+def get_existing_scripts(sheet: gspread.Worksheet) -> list[str]:
     all_values = sheet.get_all_values()
-    topics = []
+    scripts = []
     for row in all_values[1:]:
-        if len(row) > 2 and row[2]:
-            topics.append(row[2])
-    return topics
+        if len(row) > 4 and row[4]:
+            scripts.append(row[4])
+    return scripts
 
 
-def generate_content(client: anthropic.Anthropic, existing_topics: list[str]) -> list[dict]:
+def generate_content(client: anthropic.Anthropic, existing_scripts: list[str]) -> list[dict]:
     avoid_text = ""
-    if existing_topics:
-        recent = existing_topics[-20:]
+    if existing_scripts:
+        recent = existing_scripts[-20:]
         avoid_text = (
-            "\n\n以下のトピックは既出なので絶対に使わないでください:\n"
+            "\n\n以下は既出なので同じ内容・テーマは使わないでください:\n"
             + "\n".join(f"- {t}" for t in recent)
         )
 
     user_prompt = (
-        f"{NUM_POSTS}件のチンアナゴ人生相談コンテンツを生成してください。"
+        f"{NUM_POSTS}件のチンアナゴ人生相談セリフを生成してください。"
         f"{avoid_text}"
     )
 
@@ -145,28 +145,29 @@ def main():
     sheet = get_or_create_sheet(sheets_client)
 
     start_date = get_next_date(sheet)
-    existing_topics = get_existing_topics(sheet)
+    existing_scripts = get_existing_scripts(sheet)
     print(f"Generating {NUM_POSTS} posts from {start_date}")
 
-    items = generate_content(anthropic_client, existing_topics)
+    items = generate_content(anthropic_client, existing_scripts)
 
     rows = []
     for i, item in enumerate(items):
         date = start_date + datetime.timedelta(days=i)
+        script = item.get("script", "")
         rows.append([
-            date.isoformat(),          # A: Date
-            "チンアナゴ人生相談",       # B: Series
-            item.get("topic", ""),     # C: Topic or Scene
-            "",                        # D: EN Script
-            item.get("ja_subtitle", ""),  # E: JA Subtitle
-            "",                        # F: Image Prompt
-            "",                        # G: Shooting Note
-            "",                        # H: EN Caption
-            "",                        # I: JA Caption
-            "",                        # J: Hashtags
-            "Draft",                   # K: Status
+            date.isoformat(),    # A: Date
+            "チンアナゴ人生相談", # B: Series
+            "",                  # C: Topic or Scene
+            "",                  # D: EN Script
+            script,              # E: JA Subtitle（完成セリフ）
+            "",                  # F: Image Prompt
+            "",                  # G: Shooting Note
+            "",                  # H: EN Caption
+            "",                  # I: JA Caption
+            "",                  # J: Hashtags
+            "Draft",             # K: Status
         ])
-        print(f"  [{i+1}/{NUM_POSTS}] {date} | {item.get('topic', '')} → {item.get('ja_subtitle', '')}")
+        print(f"  [{i+1}/{NUM_POSTS}] {date} | {script}")
 
     sheet.append_rows(rows, value_input_option="USER_ENTERED")
     print(f"Done. Appended {len(rows)} rows.")
