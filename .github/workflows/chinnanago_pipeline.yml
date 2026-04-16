@@ -1,9 +1,7 @@
 name: Chinnanago Pipeline
 
 on:
-  schedule:
-    - cron: '0 1 * * *'  # 毎日10時JST（UTC 1時）
-  workflow_dispatch:
+  workflow_dispatch:  # 自動実行を停止。手動のみ
 
 jobs:
   run-pipeline:
