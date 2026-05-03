@@ -4,6 +4,8 @@ on:
   schedule:
     # Every Monday at 09:00 JST (= 00:00 UTC)
     - cron: "0 0 * * 1"
+    # Backup: Tuesday 09:00 JST in case Monday run was skipped by GitHub
+    - cron: "0 0 * * 2"
   workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
 jobs:

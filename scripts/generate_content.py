@@ -212,6 +212,15 @@ def main():
     sheet = get_or_create_sheet(sheets_client)
 
     start_date = get_next_date(sheet)
+
+    # Skip if this week's batch was already generated (backup Tuesday run guard)
+    today = datetime.date.today()
+    days_since_monday = today.weekday()
+    this_monday = today - datetime.timedelta(days=days_since_monday)
+    if start_date <= this_monday:
+        print(f"This week's content already exists (next date: {start_date}). Skipping.")
+        return
+
     existing_scripts = get_existing_scripts(sheet)
     print(f"Generating {NUM_POSTS} posts from {start_date}")
 
