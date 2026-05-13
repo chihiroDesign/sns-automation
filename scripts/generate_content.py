@@ -162,13 +162,28 @@ def get_existing_scripts(sheet: gspread.Worksheet) -> list[str]:
     return scripts
 
 
+def extract_themes(scripts: list[str]) -> list[str]:
+    """Extract the situation (first sentence) from each script as the theme."""
+    themes = []
+    for s in scripts:
+        # Split on Japanese period or newline, take first sentence
+        for sep in ["。", "\n", "．"]:
+            if sep in s:
+                themes.append(s.split(sep)[0])
+                break
+        else:
+            themes.append(s[:20])
+    return themes
+
+
 def generate_content(client: anthropic.Anthropic, existing_scripts: list[str]) -> list[dict]:
     avoid_text = ""
     if existing_scripts:
-        recent = existing_scripts[-20:]
+        themes = extract_themes(existing_scripts)
         avoid_text = (
-            "\n\n以下は既出なので同じ内容・テーマは使わないでください:\n"
-            + "\n".join(f"- {t}" for t in recent)
+            "\n\n## 使用済みテーマ一覧（これらと同じ・似た状況は絶対に使わないこと）\n"
+            + "\n".join(f"- {t}" for t in themes)
+            + "\n\n上記テーマと似た状況（飲み会・元カレSNS・ポイントデー・深夜の食事・やる気待ちなど重複が多いので特に注意）は禁止です。"
         )
 
     user_prompt = (
